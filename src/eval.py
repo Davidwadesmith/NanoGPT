@@ -4,7 +4,7 @@ import torch
 if __name__ == "__main__":
     cfg = Config()
     model = Transformer()
-    state_dict = torch.load("./Model/final.pt", map_location="cpu")
+    state_dict = torch.load("../checkpoints/final_loss.pt", map_location="cpu")
     model.load_state_dict(state_dict, strict=True)
     text = """
     Rust in dust.

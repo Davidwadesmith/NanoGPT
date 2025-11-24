@@ -33,7 +33,7 @@ class Config:
     head_n: int = 8
     block_n: int = 2
     device: str = "cpu"
-    model_path: str = "./Model/"
+    model_path: str = "../checkpoints/"
 
 
 class DataLoader:
@@ -104,9 +104,6 @@ class MultiheadAttention(torch.nn.Module):
         self.wv = nn.Linear(hidden_dim, hidden_dim, bias=False, device=cfg.device)
         self.wo = nn.Linear(hidden_dim, hidden_dim, bias=False, device=cfg.device)
         self.softmax = nn.Softmax(dim=-1)
-        self.mask = (torch.tril(torch.ones(cfg.seqlen, cfg.seqlen)) == 0).to(
-            torch.device(cfg.device)
-        )
 
     def forward(self, hidden_tokens):
         q = torch.transpose(
@@ -143,6 +140,10 @@ class MultiheadAttention(torch.nn.Module):
             q
             @ torch.transpose(k, -2, -1)
             / ((self.cfg.hidden_dim // self.cfg.head_n) ** 0.5)
+        )
+
+        self.mask = (torch.tril(torch.ones(self.cfg.seqlen, self.cfg.seqlen)) == 0).to(
+            torch.device(self.cfg.device)
         )
 
         masked_attention_map = torch.masked_fill(attention_map, self.mask, -inf)
@@ -222,9 +223,6 @@ class Transformer(nn.Module):
         self.embedding_layer = nn.Embedding(
             vocab_size, cfg.hidden_dim, device=cfg.device
         )
-        self.positional_embedding_layer = nn.Embedding(
-            cfg.seqlen, cfg.hidden_dim, device=cfg.device
-        )
         self.linear = nn.Linear(
             cfg.hidden_dim, vocab_size, bias=False, device=cfg.device
         )
@@ -240,10 +238,12 @@ class Transformer(nn.Module):
         logger.debug(f"{tokens.shape=}")
 
         embeddings = self.embedding_layer(tokens)
-        embeddings = embeddings + self.positional_embedding_layer(
-            torch.arange(len(tokens[0])).to(torch.device(self.cfg.device))
+
+        self.positional_embedding_layer = self.PositionEmbedding(
+            self.cfg.seqlen, self.cfg.hidden_dim
         )
 
+        embeddings = embeddings + self.positional_embedding_layer
         logger.debug(f"{embeddings.shape=}")
 
         hidden = self.blocks(embeddings)
@@ -262,6 +262,7 @@ class Transformer(nn.Module):
             return new_logits
 
     def generate(self, text: str, dataLoader: DataLoader, max_new_token=50):
+        logger.critical(f"{text=}")
         cfg = self.cfg
         tmp_batch_size = cfg.batch_size
         cfg.batch_size = 1
@@ -274,7 +275,8 @@ class Transformer(nn.Module):
 
         assert tokens.ndim == 2
         for _ in range(max_new_token):
-            self.cfg.seqlen = min(len(tokens), max_context)
+            self.cfg.seqlen = min(len(tokens[0]), max_context)
+            logger.critical(f"{self.cfg.seqlen=}")
             new_token = torch.multinomial(
                 self(tokens[:, -self.cfg.seqlen :]).squeeze(0)[-1], num_samples=1
             )
@@ -284,6 +286,18 @@ class Transformer(nn.Module):
         cfg.batch_size = tmp_batch_size
         self.cfg = cfg
         return [dataLoader.token2text(t) for t in tokens]
+
+    def PositionEmbedding(self, seqlen: int, hidden_dim: int):
+        position = torch.arange(seqlen).unsqueeze(1)
+        pe = torch.zeros(seqlen, hidden_dim)
+        div_term = torch.exp(
+            -torch.arange(0, hidden_dim, 2)
+            / hidden_dim
+            * torch.log(torch.tensor(10000))
+        )
+        pe[:, ::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        return pe
 
 
 class BigramModel(torch.nn.Module):
