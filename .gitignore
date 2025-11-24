@@ -1,0 +1,40 @@
+# Python 编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+# 虚拟环境 (Virtual Environments)
+# 不同的用户可能会用不同的名称，建议忽略所有可能的名称
+.venv
+venv/
+env/
+/lib
+/local
+# ======================================
+# PyTorch / 机器学习 / 数据
+# ======================================
+
+# 模型权重文件
+# 忽略所有 .pt 文件 (您提到的) 和 .pth 文件
+*.pt
+*.pth
+
+# 训练和推理的输出日志/临时文件
+# 忽略常见的日志目录 (例如 TensorBoard 或自定义日志)
+logs/
+checkpoints/
+output/
+temp/
+
+# 数据集 (Datasets)
+# 通常数据集不应提交到 Git 仓库
+/data/
+
+# 构建文件和测试覆盖率报告
+# 如果您使用了 setup.py
+dist/
+build/
+*.egg-info/
+
+# 测试覆盖率
+.coverage
+.cache
