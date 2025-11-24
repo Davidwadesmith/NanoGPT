@@ -33,6 +33,7 @@ class Config:
     head_n: int = 8
     block_n: int = 2
     device: str = "cpu"
+    model_path: str = "./Model/"
 
 
 class DataLoader:
@@ -206,7 +207,13 @@ class Block(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, cfg: Config, vocab_size: int, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        cfg: Config = Config(),
+        vocab_size: int = len(DataLoader("input.txt", Config()).char_set),
+        *args,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.blocks = nn.Sequential(
@@ -333,6 +340,7 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
     training function
     """
     for i in range(cfg.epochs):
+        last_val_loss = inf
         loss_sum = 0
         for _ in range(10):
             tokens, target_tokens = dataLoader.get_batch("train")
@@ -343,7 +351,10 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
             optimizer.step()
 
         loss_avg = validate(model, dataLoader)
+        if loss_avg < last_val_loss:
+            torch.save(model.state_dict(), cfg.model_path + "final.pt")
         print(f"end of {i} epochs, train loss: {loss_sum / 10}, val loss: {loss_avg}")
+        last_val_loss = loss_avg
 
 
 if __name__ == "__main__":
