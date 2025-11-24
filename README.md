@@ -1,6 +1,6 @@
-# NanoGPT - Pirate Version
+# NanoGPT
 
-本项目是 NanoGPT 的“海盗”版本，实现了一个简单易用的 GPT 语言模型。适合用于学习和实验生成式预训练变换器（GPT）的核心原理。
+本项目参照 [NanoGPT](https://github.com/karpathy/nanoGPT) ，实现了一个简单易用的 GPT 语言模型。适合用于学习和实验生成式预训练变换器（GPT）的核心原理。
 
 ## 项目结构
 
