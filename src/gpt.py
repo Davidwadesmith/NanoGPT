@@ -270,9 +270,11 @@ class Transformer(nn.Module):
         tokens = (
             dataLoader.text2token(text).unsqueeze(0).to(torch.device(self.cfg.device))
         )
+        max_context = self.cfg.seqlen
 
         assert tokens.ndim == 2
         for _ in range(max_new_token):
+            self.cfg.seqlen = min(len(tokens), max_context)
             new_token = torch.multinomial(
                 self(tokens[:, -self.cfg.seqlen :]).squeeze(0)[-1], num_samples=1
             )
