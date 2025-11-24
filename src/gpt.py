@@ -26,10 +26,10 @@ torch.manual_seed(114514)
 @dataclass
 class Config:
     learning_rate: float = 1e-3
-    epochs: int = 100
+    epochs: int = 1000
     seqlen: int = 32
     batch_size: int = 64
-    hidden_dim: int = 128
+    hidden_dim: int = 256
     head_n: int = 8
     block_n: int = 2
     device: str = "cpu"
@@ -340,7 +340,7 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
     training function
     """
     for i in range(cfg.epochs):
-        last_val_loss = inf
+        min_val_loss = inf
         loss_sum = 0
         for _ in range(10):
             tokens, target_tokens = dataLoader.get_batch("train")
@@ -351,10 +351,10 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
             optimizer.step()
 
         loss_avg = validate(model, dataLoader)
-        if loss_avg < last_val_loss:
-            torch.save(model.state_dict(), cfg.model_path + "final.pt")
+        if loss_avg < min_val_loss:
+            torch.save(model.state_dict(), cfg.model_path + "final_loss.pt")
+            min_val_loss = loss_avg
         print(f"end of {i} epochs, train loss: {loss_sum / 10}, val loss: {loss_avg}")
-        last_val_loss = loss_avg
 
 
 if __name__ == "__main__":
