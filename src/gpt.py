@@ -1,11 +1,14 @@
+"""
+NanoGPT的训练以及类定义代码
+"""
 from math import inf
 from typing import OrderedDict
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 from dataclasses import dataclass
 import logging
 import sys
+import torch
+import torch.nn.functional as F
+import torch.nn as nn
 
 from torch.optim import Optimizer
 
@@ -25,6 +28,9 @@ torch.manual_seed(114514)
 
 @dataclass
 class Config:
+    """
+    NanoGPT的各项配置参数
+    """
     learning_rate: float = 1e-3
     epochs: int = 1000
     seqlen: int = 32
@@ -38,15 +44,18 @@ class Config:
 
 
 class DataLoader:
+    """
+    加载dataset的类
+    """
     def __init__(self, file: str, cfg: Config) -> None:
         self.cfg = cfg
         with open(file, "r", encoding="utf-8") as f:
-            input = f.read()
-        self.input_len = len(input)
+            input_text = f.read()
+        self.input_len = len(input_text)
         print(f"{file=} loaded, {self.input_len=}")
-        self.validation_set = input[int(self.input_len * 0.9) :]
-        self.training_set = input[: int(self.input_len * 0.9)]
-        self.char_set = sorted(list(set(input)))
+        self.validation_set = input_text[int(self.input_len * 0.9) :]
+        self.training_set = input_text[: int(self.input_len * 0.9)]
+        self.char_set = sorted(list(set(input_text)))
         self.vocab_size = len(self.char_set)
         self.char_map = {c: i for i, c in enumerate(self.char_set)}
         self.char_map_rev = {i: c for c, i in self.char_map.items()}
@@ -54,10 +63,10 @@ class DataLoader:
         self.validation_tokens = self.text2token(self.validation_set)
         self.training_tokens = self.text2token(self.training_set)
 
-    def get_batch(self, type: str):
-        if type == "train":
+    def get_batch(self, split: str):
+        if split == "train":
             input_tokens = self.training_tokens
-        elif type == "val":
+        elif split == "val":
             input_tokens = self.validation_tokens
         else:
             input_tokens = torch.tensor(None)
