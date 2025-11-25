@@ -242,7 +242,7 @@ class Transformer(nn.Module):
 
         self.positional_embedding_layer = self.PositionEmbedding(
             self.cfg.seqlen, self.cfg.hidden_dim
-        )
+        ).to(torch.device(self.cfg.device))
 
         embeddings = embeddings + self.positional_embedding_layer
         logger.debug(f"{embeddings.shape=}")
