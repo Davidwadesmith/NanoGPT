@@ -365,8 +365,8 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
     """
     training function
     """
+    min_val_loss = inf
     for i in range(cfg.epochs):
-        min_val_loss = inf
         loss_sum = 0
         for _ in range(10):
             tokens, target_tokens = dataLoader.get_batch("train")
