@@ -1,6 +1,7 @@
 """
 NanoGPT的训练以及类定义代码
 """
+
 from math import inf
 from typing import OrderedDict
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ class Config:
     """
     NanoGPT的各项配置参数
     """
+
     learning_rate: float = 1e-3
     epochs: int = 1000
     seqlen: int = 32
@@ -47,6 +49,7 @@ class DataLoader:
     """
     加载dataset的类
     """
+
     def __init__(self, file: str, cfg: Config) -> None:
         self.cfg = cfg
         with open(file, "r", encoding="utf-8") as f:
@@ -236,6 +239,7 @@ class Transformer(nn.Module):
         self.linear = nn.Linear(
             cfg.hidden_dim, vocab_size, bias=False, device=cfg.device
         )
+        self.linear.weight = self.embedding_layer.weight
 
     def forward(self, tokens, target_tokens=None):
         tokens = tokens.to(torch.device(self.cfg.device))
