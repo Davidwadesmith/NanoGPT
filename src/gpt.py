@@ -34,6 +34,7 @@ class Config:
     block_n: int = 2
     device: str = "cpu"
     model_path: str = "../checkpoints/"
+    dataset: str = "../data/input.txt"
 
 
 class DataLoader:
@@ -211,7 +212,7 @@ class Transformer(nn.Module):
     def __init__(
         self,
         cfg: Config = Config(),
-        vocab_size: int = len(DataLoader("input.txt", Config()).char_set),
+        vocab_size: int = len(DataLoader(Config().dataset, Config()).char_set),
         *args,
         **kwargs,
     ) -> None:
@@ -375,7 +376,7 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
 
 if __name__ == "__main__":
     config = Config()
-    dataLoader = DataLoader("input.txt", config)
+    dataLoader = DataLoader(config.dataset, config)
     model = BigramModel(config, dataLoader.vocab_size, hidden_dim=256)
     transformer = Transformer(config, dataLoader.vocab_size)
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)

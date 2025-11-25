@@ -11,8 +11,8 @@ if __name__ == "__main__":
     """
     print(
         "".join(
-            model.generate(text, DataLoader("input.txt", Config()), max_new_token=500)[
-                0
-            ]
+            model.generate(
+                text, DataLoader(Config().dataset, Config()), max_new_token=500
+            )[0]
         )
     )
