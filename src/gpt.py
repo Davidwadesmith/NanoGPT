@@ -1,5 +1,5 @@
 """
-NanoGPT的训练以及类定义代码
+NanoGPT的类定义代码
 """
 
 from math import inf
@@ -10,8 +10,6 @@ import sys
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-
-from torch.optim import Optimizer
 
 # ---Debug Settings
 logging.basicConfig(
@@ -360,98 +358,3 @@ class BigramModel(torch.nn.Module):
             )
             tokens = torch.cat([tokens, new_token.unsqueeze_(0)], dim=-1)
         return [dataLoader.token2text(t) for t in tokens]
-
-
-@torch.no_grad
-def validate(model: nn.Module, dataLoader: DataLoader):
-    """
-    helper function for evaluate loss on validation set
-    """
-    sum = 0
-    for _ in range(10):
-        tokens, target_tokens = dataLoader.get_batch("val")
-        _, loss = model(tokens, target_tokens)
-        sum += loss
-
-    return sum / 10
-
-
-def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: Config):
-    """
-    training function
-    """
-    min_val_loss = inf
-    for i in range(cfg.epochs):
-        loss_sum = 0
-        for _ in range(50):
-            tokens, target_tokens = dataLoader.get_batch("train")
-            _, loss = model(tokens, target_tokens)
-            loss_sum += loss
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        loss_avg = validate(model, dataLoader)
-        if loss_avg < min_val_loss:
-            torch.save(model.state_dict(), cfg.model_path + "final_loss.pt")
-            min_val_loss = loss_avg
-        print(f"end of {i} epochs, train loss: {loss_sum / 50}, val loss: {loss_avg}")
-
-
-if __name__ == "__main__":
-    config = Config()
-    dataLoader = DataLoader(config.dataset, config)
-    model = BigramModel(config, dataLoader.vocab_size, hidden_dim=256)
-    transformer = Transformer(config, dataLoader.vocab_size)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate)
-    tf_optimizer = torch.optim.AdamW(transformer.parameters(), lr=config.learning_rate)
-    text = """
-COUNTESS
-In delivering my son from me, I bury a second husband.
-BERTRAM
-And I in going, madam, weep o'er my father's death
-anew: but I must attend his majesty's command, to
-whom I am now in ward, evermore in subjection.
-LAFEU
-You shall find of the king a husband, madam; you,
-sir, a father: he that so generally is at all times
-good must of necessity hold his virtue to you; whose
-worthiness would stir it up where it wanted rather
-than lack it where there is such abundance.
-COUNTESS
-What hope is there of his majesty's amendment?
-LAFEU
-He hath abandoned his physicians, madam; under whose
-practises he hath persecuted time with hope, and
-finds no other advantage in the process but only the
-losing of hope by time.
-COUNTESS
-This young gentlewoman had a father,--O, that
-'had'! how sad a passage 'tis!--whose skill was
-almost as great as his honesty; had it stretched so
-far, would have made nature immortal, and death
-should have play for lack of work. Would, for the
-king's sake, he were living! I think it would be
-the death of the king's disease.
-LAFEU
-How called you the man you speak of, madam?
-COUNTESS
-He was famous, sir, in his profession, and it was
-his great right to be so: Gerard de Narbon.
-LAFEU
-He was excellent indeed, madam: the king very
-lately spoke of him admiringly and mourningly: he
-was skilful enough to have lived still, if knowledge
-could be set up against mortality.
-    """
-
-    print("".join(transformer.generate(text, dataLoader, max_new_token=90)[0]))
-    try:
-        train(transformer, tf_optimizer, dataLoader, config)
-    except Exception as e:
-        logger.error(f"Error in training loop: {type(e).__name__}", exc_info=True)
-    print("".join(transformer.generate(text, dataLoader, max_new_token=90)[0]))
-
-    # print("".join(model.generate(text, dataLoader, max_new_token=90)[0]))
-    # train(model, dataLoader, config)
-    # print("".join(model.generate(text, dataLoader, max_new_token=90)[0]))
