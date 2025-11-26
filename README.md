@@ -42,6 +42,9 @@ python src/eval.py
 - `eval.py` 用于加载训练好的模型进行评估和生成。
 - 项目全部用 Python 编写，适合熟悉 Python 和深度学习的用户快速上手和二次开发。
 
+## 流程图
+![流程图](./flowchart.png)
+
 ## 🗺️ Roadmap & Learning Path
 
 这是一个以 NanoGPT 为起点的深度学习科研训练路线图。本项目旨在从零开始理解 LLM 的每一个细节，并逐步将其改造为现代化的、支持科研实验的高性能框架。
