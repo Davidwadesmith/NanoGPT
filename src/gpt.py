@@ -128,7 +128,7 @@ class MultiheadAttention(torch.nn.Module):
             ),
             1,
             2,
-        )
+        )  # (batch_size, head_n, seqlen, head_dim)
         k = torch.transpose(
             self.wk(hidden_tokens).view(
                 self.cfg.batch_size,
@@ -138,7 +138,7 @@ class MultiheadAttention(torch.nn.Module):
             ),
             1,
             2,
-        )
+        )  # (batch_size, head_n, seqlen, head_dim)
         v = torch.transpose(
             self.wv(hidden_tokens).view(
                 self.cfg.batch_size,
@@ -148,23 +148,27 @@ class MultiheadAttention(torch.nn.Module):
             ),
             1,
             2,
-        )
+        )  # (batch_size, head_n, seqlen, head_dim)
         attention_map = (
-            q
-            @ torch.transpose(k, -2, -1)
+            q  # (batch_size, head_n, seqlen, head_dim)
+            @ torch.transpose(k, -2, -1)  # (batch_size, head_n, head_dim, seqlen)
             / ((self.cfg.hidden_dim // self.cfg.head_n) ** 0.5)
-        )
+        )  # (batch_size, head_n, seqlen, seqlen)
 
         self.mask = (torch.tril(torch.ones(self.cfg.seqlen, self.cfg.seqlen)) == 0).to(
             torch.device(self.cfg.device)
-        )
+        )  # (seqlen, seqlen)
 
-        masked_attention_map = torch.masked_fill(attention_map, self.mask, -inf)
-        masked_attention = self.softmax(masked_attention_map) @ v
+        masked_attention_map = torch.masked_fill(
+            attention_map, self.mask, -inf
+        )  # match -1, -2 dim
+        masked_attention = (
+            self.softmax(masked_attention_map) @ v
+        )  # (batch_size, head_n, seqlen, head_dim)
 
         return torch.transpose(masked_attention, 1, 2).reshape(
             self.cfg.batch_size, self.cfg.seqlen, self.cfg.hidden_dim
-        )
+        )  # (batch_size, seqlen, hidden_dim)
 
 
 class FFN(nn.Module):
@@ -199,8 +203,10 @@ class LayerNorm(nn.Module):
         )
 
     def forward(self, hidden_tokens: torch.Tensor):
-        mean = hidden_tokens.mean(dim=-1, keepdim=True)
-        variance = torch.var(hidden_tokens, dim=-1, keepdim=True)
+        mean = hidden_tokens.mean(dim=-1, keepdim=True)  # mean(batch_size, seqlen, 1)
+        variance = torch.var(
+            hidden_tokens, dim=-1, keepdim=True
+        )  # variance(batch_size, seqlen, 1)
         x = (hidden_tokens - mean) / (variance**0.5)
         y = (self.gamma * x) / ((variance + 1e-5) ** 0.5) + self.beta
         return y
@@ -242,16 +248,20 @@ class Transformer(nn.Module):
         self.linear.weight = self.embedding_layer.weight
 
     def forward(self, tokens, target_tokens=None):
-        tokens = tokens.to(torch.device(self.cfg.device))
+        tokens = tokens.to(torch.device(self.cfg.device))  # tokens(batch_size, seqlen)
         if target_tokens is not None:
-            target_tokens = target_tokens.to(torch.device(self.cfg.device))
+            target_tokens = target_tokens.to(
+                torch.device(self.cfg.device)
+            )  # tokens(batch_size, seqlen)
 
         batch_size = len(tokens)
         seqlen = len(tokens[0])
 
         logger.debug(f"{tokens.shape=}")
 
-        embeddings = self.embedding_layer(tokens)
+        embeddings = self.embedding_layer(
+            tokens
+        )  # embeddings(batch_size, seqlen, hidden_dim)
 
         self.positional_embedding_layer = self.PositionEmbedding(
             self.cfg.seqlen, self.cfg.hidden_dim
@@ -260,16 +270,17 @@ class Transformer(nn.Module):
         embeddings = embeddings + self.positional_embedding_layer
         logger.debug(f"{embeddings.shape=}")
 
-        hidden = self.blocks(embeddings)
-        last = self.linear(hidden)
+        hidden = self.blocks(embeddings)  # hidden(batch_size, seqlen, hidden_dim)
+        last = self.linear(hidden)  # last(batch_size, seqlen, hidden_dim)
 
-        # print(embeddings.shape)
-        new_logits = F.softmax(last, dim=-1)
+        new_logits = F.softmax(
+            last, dim=-1
+        )  # new_logits(batch_size, seqlen, hidden_dim)
 
         if target_tokens is not None:
             loss = F.cross_entropy(
-                last.view(batch_size * seqlen, -1),
-                target_tokens.view(batch_size * seqlen),
+                last.view(batch_size * seqlen, -1),  # (batch_size*seqlen, hidden_dim)
+                target_tokens.view(batch_size * seqlen),  # (batch_size*seqlen)
             )
             return new_logits, loss
         else:
@@ -372,7 +383,7 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
     min_val_loss = inf
     for i in range(cfg.epochs):
         loss_sum = 0
-        for _ in range(524):
+        for _ in range(50):
             tokens, target_tokens = dataLoader.get_batch("train")
             _, loss = model(tokens, target_tokens)
             loss_sum += loss
@@ -384,7 +395,7 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
         if loss_avg < min_val_loss:
             torch.save(model.state_dict(), cfg.model_path + "final_loss.pt")
             min_val_loss = loss_avg
-        print(f"end of {i} epochs, train loss: {loss_sum / 10}, val loss: {loss_avg}")
+        print(f"end of {i} epochs, train loss: {loss_sum / 50}, val loss: {loss_avg}")
 
 
 if __name__ == "__main__":
