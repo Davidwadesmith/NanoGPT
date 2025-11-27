@@ -1,4 +1,4 @@
-from gpt import DataLoader, Transformer, Config
+from model import DataLoader, Transformer, Config
 import torch
 
 if __name__ == "__main__":

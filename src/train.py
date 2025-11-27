@@ -4,7 +4,7 @@ from math import inf
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
-from gpt import DataLoader, Transformer, Config
+from model import DataLoader, Transformer, Config
 
 # Debug Settings
 logging.basicConfig(
@@ -61,4 +61,3 @@ if __name__ == "__main__":
         train(transformer, tf_optimizer, dataLoader, config)
     except Exception as e:
         logger.error(f"Error in training loop: {type(e).__name__}", exc_info=True)
-
