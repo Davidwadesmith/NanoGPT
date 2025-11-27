@@ -177,10 +177,8 @@ class Transformer(nn.Module):
                 torch.device(self.cfg.device)
             )  # tokens(batch_size, seqlen)
 
-        batch_size = len(tokens)
-        seqlen = len(tokens[0])
-
-        logger.debug(f"{tokens.shape=}")
+        batch_size = tokens.shape[0]
+        seqlen = tokens.shape[1]
 
         embeddings = self.embedding_layer(
             tokens
@@ -241,7 +239,7 @@ class Transformer(nn.Module):
         div_term = torch.exp(
             -torch.arange(0, hidden_dim, 2)
             / hidden_dim
-            * torch.log(torch.tensor(10000))
+            * torch.log(torch.tensor(10000.0))
         )
         pe[:, ::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)

@@ -64,7 +64,7 @@ python eval.py
 ### Phase 1
 - [x] **代码重构与注释**：对 `gpt.py` 进行逐行注释，绘制数据流图；添加 Type Hinting 增强代码可读性。
 - [x] **单元测试 (Unit Tests)**：为 Attention、FeedForward 等模块编写测试用例，确保形状（Shape）变换正确。
-- [ ] **可视化监控**：接入 WandB 或 TensorBoard，监控 Loss、Grad Norm、Learning Rate 变化，学会通过曲线诊断训练问题。
+- [x] **可视化监控**：接入 WandB 或 TensorBoard，监控 Loss、Grad Norm、Learning Rate 变化，学会通过曲线诊断训练问题。
 - [ ] **HuggingFace 兼容**：编写脚本支持加载/导出 HuggingFace 格式权重，方便利用社区生态进行评估。
 
 ### Phase 2
