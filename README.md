@@ -2,45 +2,59 @@
 
 本项目参照 [NanoGPT](https://github.com/karpathy/nanoGPT) ，实现了一个简单易用的 GPT 语言模型。适合用于学习和实验生成式预训练变换器（GPT）的核心原理。
 
-## 项目结构
+## 📂 项目结构
 
-主要代码均在 `src/` 目录下，包括：
+本项目采用模块化设计，便于扩展和实验。
 
-- [`gpt.py`](https://github.com/Davidwadesmith/NanoGPT/blob/main/src/gpt.py)：核心 GPT 模型实现。
-- [`eval.py`](https://github.com/Davidwadesmith/NanoGPT/blob/main/src/eval.py)：模型评估与推理脚本。
-- [`input.txt`](https://github.com/Davidwadesmith/NanoGPT/blob/main/src/input.txt)：训练用语料文本。
+### 顶级目录
+*   `train.py`：模型训练的主入口脚本。
+*   `eval.py`：模型评估与文本生成脚本。
+*   `setup.py`：安装脚本（依赖清单）。
+*   `README.md`：项目说明文档与路线图。
 
-## 快速开始
+### 源码模块 (`src/`)
+核心逻辑位于 `src/` 目录下。
+*   `src/model.py`：定义 Transformer 架构（Attention, FFN, LayerNorm）。
+*   `src/dataloader.py`：负责数据加载与预处理。
+*   `src/tokenizer.py`：处理文本的分词逻辑。
+*   `src/config.py`：**配置文件**。集中管理所有超参数和路径设置。
+
+### 测试 (`tests/`)
+包含单元测试以确保组件可靠性。
+*   `tests/test_attention.py`：验证 Attention 机制的输出形状。
+
+## 🚀 快速开始
 
 ### 环境准备
 
-python>=3.12，并根据需要自行安装 `torch` 等深度学习相关依赖。
+Python >= 3.12。请根据您的环境安装 `torch` 等深度学习依赖。
 
 ### 训练模型
 
-首先准备你的数据（替换或修改 `src/input.txt`），然后运行核心训练脚本：
+首先准备您的数据，然后运行训练脚本：
 
-```zsh
-python src/gpt.py
+```bash
+python train.py
 ```
 
-模型会基于数据进行训练，详细参数和用法请查阅源码文档。
+模型将基于配置文件中的数据路径进行训练。详细参数请参阅 `src/config.py`。
 
 ### 模型评估与文本生成
 
-训练完成后，可使用评估脚本进行推理或生成文本：
+训练完成后，使用评估脚本进行推理或生成文本：
 
-```zsh
-python src/eval.py
+```bash
+python eval.py
 ```
 
-你可以根据需要修改脚本中的参数，生成不同风格的文本。
+您可以根据需要修改脚本参数，以生成不同的文本。
 
-## 代码说明
+## 📖 代码说明
 
-- `gpt.py` 实现了 GPT 模型的完整训练与推理的基本逻辑，包括模型结构、损失函数等。
-- `eval.py` 用于加载训练好的模型进行评估和生成。
-- 项目全部用 Python 编写，适合熟悉 Python 和深度学习的用户快速上手和二次开发。
+- **`train.py`**：整合了数据加载、模型初始化和训练循环。
+- **`src/model.py`**：实现了 GPT 模型的核心组件，包括多头注意力机制和前馈网络。
+- **`src/tokenizer.py`**：简单的字符级分词器实现。
+- **`src/config.py`**：管理如 `batch_size`、`learning_rate` 等超参数。
 
 ## 流程图
 ![流程图](./flowchart.png)
@@ -80,4 +94,3 @@ python src/eval.py
 ## 许可协议
 
 本项目采用 MIT License。
-
