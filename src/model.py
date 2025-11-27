@@ -3,14 +3,16 @@ NanoGPT的类定义代码
 """
 
 from math import inf
-from typing import OrderedDict
+from typing import OrderedDict, Tuple
 import logging
 import sys
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
-from config import Config
-from dataloader import DataLoader
+
+from src.tokenizer import Tokenizer
+from .config import Config
+from .dataloader import DataLoader
 
 # ---Debug Settings
 logging.basicConfig(
@@ -37,7 +39,7 @@ class MultiheadAttention(torch.nn.Module):
         self.wo = nn.Linear(hidden_dim, hidden_dim, bias=False, device=cfg.device)
         self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, hidden_tokens):
+    def forward(self, hidden_tokens) -> torch.Tensor:
         q = torch.transpose(
             self.wq(hidden_tokens).view(
                 self.cfg.batch_size,
@@ -103,7 +105,7 @@ class FFN(nn.Module):
             hidden_dim * 8, hidden_dim, bias=False, device=cfg.device
         )
 
-    def forward(self, hidden_tokens: torch.Tensor):
+    def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
         return self.fastforward_layer_out(
             self.gelu(self.fastforward_layer_in(hidden_tokens))
         )
@@ -121,7 +123,7 @@ class LayerNorm(nn.Module):
             torch.device(cfg.device)
         )
 
-    def forward(self, hidden_tokens: torch.Tensor):
+    def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
         mean = hidden_tokens.mean(dim=-1, keepdim=True)  # mean(batch_size, seqlen, 1)
         variance = torch.var(
             hidden_tokens, dim=-1, keepdim=True
@@ -140,7 +142,7 @@ class Block(nn.Module):
         self.layernorm_2 = LayerNorm(cfg)
         self.ffn = FFN(cfg)
 
-    def forward(self, hidden_tokens: torch.Tensor):
+    def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
         x = self.multiheadAttention(self.layernorm_1(hidden_tokens)) + hidden_tokens
         return self.ffn(self.layernorm_2(x)) + x
 
@@ -149,7 +151,7 @@ class Transformer(nn.Module):
     def __init__(
         self,
         cfg: Config = Config(),
-        vocab_size: int = len(DataLoader(Config().dataset, Config()).char_set),
+        vocab_size: int = Config().vocab_size,
         *args,
         **kwargs,
     ) -> None:
@@ -166,7 +168,9 @@ class Transformer(nn.Module):
         )
         self.linear.weight = self.embedding_layer.weight
 
-    def forward(self, tokens, target_tokens=None):
+    def forward(
+        self, tokens, target_tokens=None
+    ) -> torch.Tensor | Tuple[torch.Tensor, torch.Tensor]:
         tokens = tokens.to(torch.device(self.cfg.device))  # tokens(batch_size, seqlen)
         if target_tokens is not None:
             target_tokens = target_tokens.to(
@@ -205,7 +209,7 @@ class Transformer(nn.Module):
         else:
             return new_logits
 
-    def generate(self, text: str, dataLoader: DataLoader, max_new_token=50):
+    def generate(self, text: str, tokenizer: Tokenizer, max_new_token=50) -> str:
         logger.critical(f"{text=}")
         cfg = self.cfg
         tmp_batch_size = cfg.batch_size
@@ -213,7 +217,7 @@ class Transformer(nn.Module):
         self.cfg = cfg
 
         tokens = (
-            dataLoader.text2token(text).unsqueeze(0).to(torch.device(self.cfg.device))
+            tokenizer.text2token(text).unsqueeze(0).to(torch.device(self.cfg.device))
         )
         max_context = self.cfg.seqlen
 
@@ -229,7 +233,7 @@ class Transformer(nn.Module):
         cfg = self.cfg
         cfg.batch_size = tmp_batch_size
         self.cfg = cfg
-        return [dataLoader.token2text(t) for t in tokens]
+        return "".join([tokenizer.token2text(t) for t in tokens][0])
 
     def PositionEmbedding(self, seqlen: int, hidden_dim: int):
         position = torch.arange(seqlen).unsqueeze(1)

@@ -1,6 +1,7 @@
 import logging
 import torch
-from config import Config
+import json
+from .config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,10 @@ class DataLoader:
         self.char_map = {c: i for i, c in enumerate(self.char_set)}
         self.char_map_rev = {i: c for c, i in self.char_map.items()}
         logger.info(f"char_map: {self.char_map}")
+
+        with open("./data/meta.json", "w", encoding="utf-8") as f:
+            json.dump(self.char_map, f)
+
         self.validation_tokens = self.text2token(self.validation_set)
         self.training_tokens = self.text2token(self.training_set)
 

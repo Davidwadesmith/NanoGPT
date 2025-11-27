@@ -4,7 +4,9 @@ from math import inf
 import torch
 import torch.nn as nn
 from torch.optim import Optimizer
-from model import DataLoader, Transformer, Config
+from src.model import Transformer
+from src.dataloader import DataLoader
+from src.config import Config
 
 # Debug Settings
 logging.basicConfig(
