@@ -40,8 +40,26 @@ class MultiheadAttention(torch.nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, hidden_tokens) -> torch.Tensor:
+        q = self.wq(hidden_tokens)
+        k = self.wk(hidden_tokens)
+        if self.cfg.embed == "RoPE":
+            q = self.RoPE(
+                self.cfg.batch_size,
+                self.cfg.seqlen,
+                self.cfg.hidden_dim,
+                q,
+                torch.device(self.cfg.device),
+            )
+            k = self.RoPE(
+                self.cfg.batch_size,
+                self.cfg.seqlen,
+                self.cfg.hidden_dim,
+                k,
+                torch.device(self.cfg.device),
+            )
+
         q = torch.transpose(
-            self.wq(hidden_tokens).view(
+            q.view(
                 self.cfg.batch_size,
                 self.cfg.seqlen,
                 self.cfg.head_n,
@@ -51,7 +69,7 @@ class MultiheadAttention(torch.nn.Module):
             2,
         )  # (batch_size, head_n, seqlen, head_dim)
         k = torch.transpose(
-            self.wk(hidden_tokens).view(
+            k.view(
                 self.cfg.batch_size,
                 self.cfg.seqlen,
                 self.cfg.head_n,
@@ -70,6 +88,7 @@ class MultiheadAttention(torch.nn.Module):
             1,
             2,
         )  # (batch_size, head_n, seqlen, head_dim)
+
         attention_map = (
             q  # (batch_size, head_n, seqlen, head_dim)
             @ torch.transpose(k, -2, -1)  # (batch_size, head_n, head_dim, seqlen)
@@ -90,6 +109,37 @@ class MultiheadAttention(torch.nn.Module):
         return torch.transpose(masked_attention, 1, 2).reshape(
             self.cfg.batch_size, self.cfg.seqlen, self.cfg.hidden_dim
         )  # (batch_size, seqlen, hidden_dim)
+
+    @staticmethod
+    def RoPE(
+        batch_size: int,
+        seqlen: int,
+        hidden_dim: int,
+        x: torch.Tensor,
+        device: torch.device,
+    ) -> torch.Tensor:
+        result = torch.zeros_like(x).to(device)  # (batch_size, seqlen, hidden_dim)
+        position = (
+            torch.arange(0, seqlen, dtype=torch.float32).unsqueeze(1).unsqueeze(0)
+        ).to(device)  # (1, seqlen, 1)
+        pe = (
+            torch.exp(
+                (-torch.arange(0, hidden_dim, 2, dtype=torch.float32) + 2)
+                / hidden_dim
+                * torch.log(torch.tensor(10000.0))
+            )
+            .unsqueeze(0)
+            .unsqueeze(0)
+        ).to(device)  # (1, 1, d // 2)
+        result[:, :, ::2] = x[:, :, : hidden_dim // 2] * torch.cos(pe * position) - x[
+            :, :, hidden_dim // 2 :
+        ] * torch.sin(pe * position)
+
+        result[:, :, 1::2] = x[:, :, : hidden_dim // 2] * torch.sin(pe * position) - x[
+            :, :, hidden_dim // 2 :
+        ] * torch.cos(pe * position)
+
+        return result
 
 
 class FFN(nn.Module):
@@ -188,8 +238,15 @@ class Transformer(nn.Module):
             self.cfg.seqlen, self.cfg.hidden_dim
         ).to(torch.device(self.cfg.device))
 
-        embeddings = embeddings + self.positional_embedding_layer
-        logger.debug(f"{embeddings.shape=}")
+        if self.cfg.embed == "sinusoidal":
+            embeddings = embeddings + self.positional_embedding_layer
+            logger.debug(f"{embeddings.shape=}")
+        elif self.cfg.embed == "RoPE":
+            pass
+        else:
+            logger.info("Default config of positional embeddings: sinusoidal")
+            embeddings = embeddings + self.positional_embedding_layer
+            logger.debug(f"{embeddings.shape=}")
 
         hidden = self.blocks(embeddings)  # hidden(batch_size, seqlen, hidden_dim)
         last = self.linear(hidden)  # last(batch_size, seqlen, hidden_dim)
@@ -233,7 +290,8 @@ class Transformer(nn.Module):
         self.cfg = cfg
         return "".join([tokenizer.token2text(t) for t in tokens][0])
 
-    def PositionEmbedding(self, seqlen: int, hidden_dim: int):
+    @staticmethod
+    def PositionEmbedding(seqlen: int, hidden_dim: int):
         position = torch.arange(seqlen).unsqueeze(1)
         pe = torch.zeros(seqlen, hidden_dim)
         div_term = torch.exp(

@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from torch.optim import Optimizer
 import torch.utils.tensorboard as tensorboard
-from src import model
 from src.model import Transformer
 from src.dataloader import DataLoader
 from src.config import Config

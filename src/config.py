@@ -22,3 +22,5 @@ class Config:
     device: str = "cpu"
     model_path: str = "./checkpoints/"
     dataset: str = "./data/input.txt"
+
+    embed: str = "RoPE"

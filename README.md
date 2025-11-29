@@ -68,7 +68,7 @@ python eval.py
 - [ ] **HuggingFace 兼容**：编写脚本支持加载/导出 HuggingFace 格式权重，方便利用社区生态进行评估。
 
 ### Phase 2
-- [ ] **位置编码升级**：移除绝对位置编码，实现 **RoPE (Rotary Positional Embeddings)**。
+- [x] **位置编码升级**：移除绝对位置编码，实现 **RoPE (Rotary Positional Embeddings)**。
 - [ ] **归一化升级**：将 LayerNorm 替换为 **RMSNorm**，并尝试 Pre-Norm 架构。
 - [ ] **激活函数升级**：将 GELU 替换为 **SwiGLU**。
 - [ ] **注意力机制优化**：实现 **GQA (Grouped Query Attention)**，理解 KV Cache 的显存优化原理。
