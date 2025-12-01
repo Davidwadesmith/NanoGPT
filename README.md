@@ -69,7 +69,7 @@ python eval.py
 
 ### Phase 2
 - [x] **位置编码升级**：移除绝对位置编码，实现 **RoPE (Rotary Positional Embeddings)**。
-- [ ] **归一化升级**：将 LayerNorm 替换为 **RMSNorm**，并尝试 Pre-Norm 架构。
+- [x] **归一化升级**：将 LayerNorm 替换为 **RMSNorm**，并尝试 Pre-Norm 架构。
 - [ ] **激活函数升级**：将 GELU 替换为 **SwiGLU**。
 - [ ] **注意力机制优化**：实现 **GQA (Grouped Query Attention)**，理解 KV Cache 的显存优化原理。
 - [ ] **权重初始化**：研究并复现不同的初始化策略（如 MuP），观察对收敛速度的影响。

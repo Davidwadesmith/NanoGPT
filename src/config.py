@@ -24,3 +24,4 @@ class Config:
     dataset: str = "./data/input.txt"
 
     embed: str = "RoPE"
+    norm: str = "RMSNorm"

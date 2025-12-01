@@ -183,13 +183,36 @@ class LayerNorm(nn.Module):
         return y
 
 
+class RMSNorm(nn.Module):
+    def __init__(self, cfg: Config, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.cfg = cfg
+        self.gamma = nn.Parameter(torch.ones(cfg.hidden_dim), requires_grad=True).to(
+            torch.device(cfg.device)
+        )
+
+    def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
+        variance = torch.var(
+            hidden_tokens, dim=-1, keepdim=True
+        )  # variance(batch_size, seqlen, 1)
+        x = (hidden_tokens) / (variance**0.5)
+        y = (self.gamma * x) / ((variance + 1e-5) ** 0.5)
+        return y
+
+
 class Block(nn.Module):
     def __init__(self, cfg: Config, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.multiheadAttention = MultiheadAttention(cfg)
-        self.layernorm_1 = LayerNorm(cfg)
-        self.layernorm_2 = LayerNorm(cfg)
+
+        if cfg.norm == "LayerNorm":
+            self.layernorm_1 = LayerNorm(cfg)
+            self.layernorm_2 = LayerNorm(cfg)
+        elif cfg.norm == "RMSNorm":
+            self.layernorm_1 = RMSNorm(cfg)
+            self.layernorm_2 = RMSNorm(cfg)
+
         self.ffn = FFN(cfg)
 
     def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
