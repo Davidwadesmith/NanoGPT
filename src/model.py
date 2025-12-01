@@ -161,6 +161,25 @@ class FFN(nn.Module):
         )
 
 
+class SwiGLU(nn.Module):
+    def __init__(self, cfg: Config, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.cfg = cfg
+        self.w1 = nn.Linear(
+            cfg.hidden_dim, cfg.hidden_dim * 3, bias=False, device=cfg.device
+        )
+        self.w2 = nn.Linear(
+            cfg.hidden_dim, cfg.hidden_dim * 3, bias=False, device=cfg.device
+        )
+        self.w3 = nn.Linear(
+            cfg.hidden_dim * 3, cfg.hidden_dim, bias=False, device=cfg.device
+        )
+        self.silu = nn.SiLU()
+
+    def forward(self, hidden_tokens) -> torch.Tensor:
+        return self.w3(self.silu(self.w2(hidden_tokens)) * self.w1(hidden_tokens))
+
+
 class LayerNorm(nn.Module):
     def __init__(self, cfg: Config, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -213,7 +232,10 @@ class Block(nn.Module):
             self.layernorm_1 = RMSNorm(cfg)
             self.layernorm_2 = RMSNorm(cfg)
 
-        self.ffn = FFN(cfg)
+        if cfg.activation == "GELU":
+            self.ffn = FFN(cfg)
+        elif cfg.activation == "SwiGLU":
+            self.ffn = SwiGLU(cfg)
 
     def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
         x = self.multiheadAttention(self.layernorm_1(hidden_tokens)) + hidden_tokens
