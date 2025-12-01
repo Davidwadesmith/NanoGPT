@@ -106,8 +106,10 @@ class MultiheadAttention(torch.nn.Module):
             self.softmax(masked_attention_map) @ v
         )  # (batch_size, head_n, seqlen, head_dim)
 
-        return torch.transpose(masked_attention, 1, 2).reshape(
-            self.cfg.batch_size, self.cfg.seqlen, self.cfg.hidden_dim
+        return self.wo(
+            torch.transpose(masked_attention, 1, 2).reshape(
+                self.cfg.batch_size, self.cfg.seqlen, self.cfg.hidden_dim
+            )
         )  # (batch_size, seqlen, hidden_dim)
 
     @staticmethod
@@ -121,7 +123,9 @@ class MultiheadAttention(torch.nn.Module):
         result = torch.zeros_like(x).to(device)  # (batch_size, seqlen, hidden_dim)
         position = (
             torch.arange(0, seqlen, dtype=torch.float32).unsqueeze(1).unsqueeze(0)
-        ).to(device)  # (1, seqlen, 1)
+        ).to(
+            device
+        )  # (1, seqlen, 1)
         pe = (
             torch.exp(
                 (-torch.arange(0, hidden_dim, 2, dtype=torch.float32) + 2)
@@ -130,7 +134,9 @@ class MultiheadAttention(torch.nn.Module):
             )
             .unsqueeze(0)
             .unsqueeze(0)
-        ).to(device)  # (1, 1, d // 2)
+        ).to(
+            device
+        )  # (1, 1, d // 2)
         result[:, :, ::2] = x[:, :, : hidden_dim // 2] * torch.cos(pe * position) - x[
             :, :, hidden_dim // 2 :
         ] * torch.sin(pe * position)
