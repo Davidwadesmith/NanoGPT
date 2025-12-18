@@ -123,9 +123,7 @@ class MultiheadAttention(torch.nn.Module):
         result = torch.zeros_like(x).to(device)  # (batch_size, seqlen, hidden_dim)
         position = (
             torch.arange(0, seqlen, dtype=torch.float32).unsqueeze(1).unsqueeze(0)
-        ).to(
-            device
-        )  # (1, seqlen, 1)
+        ).to(device)  # (1, seqlen, 1)
         pe = (
             torch.exp(
                 (-torch.arange(0, hidden_dim, 2, dtype=torch.float32) + 2)
@@ -134,16 +132,14 @@ class MultiheadAttention(torch.nn.Module):
             )
             .unsqueeze(0)
             .unsqueeze(0)
-        ).to(
-            device
-        )  # (1, 1, d // 2)
-        result[:, :, ::2] = x[:, :, : hidden_dim // 2] * torch.cos(pe * position) - x[
-            :, :, hidden_dim // 2 :
-        ] * torch.sin(pe * position)
+        ).to(device)  # (1, 1, d // 2)
+        result[:, :, : hidden_dim // 2] = x[:, :, : hidden_dim // 2] * torch.cos(
+            pe * position
+        ) - x[:, :, hidden_dim // 2 :] * torch.sin(pe * position)
 
-        result[:, :, 1::2] = x[:, :, : hidden_dim // 2] * torch.sin(pe * position) - x[
-            :, :, hidden_dim // 2 :
-        ] * torch.cos(pe * position)
+        result[:, :, hidden_dim // 2 :] = x[:, :, : hidden_dim // 2] * torch.sin(
+            pe * position
+        ) + x[:, :, hidden_dim // 2 :] * torch.cos(pe * position)
 
         return result
 
