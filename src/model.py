@@ -126,7 +126,7 @@ class MultiheadAttention(torch.nn.Module):
         ).to(device)  # (1, seqlen, 1)
         pe = (
             torch.exp(
-                (-torch.arange(0, hidden_dim, 2, dtype=torch.float32) + 2)
+                (-torch.arange(0, hidden_dim, 2, dtype=torch.float32))
                 / hidden_dim
                 * torch.log(torch.tensor(10000.0))
             )
