@@ -1,0 +1,23 @@
+[project]
+name = "nanogpt"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch>=2.10.0",
+    "torchaudio>=2.10.0",
+    "torchvision>=0.25.0",
+]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"] # 检查错误、格式、导入顺序
+
+[tool.ruff.isort]
+known-first-party = ["src"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.5",
+]

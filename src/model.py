@@ -2,15 +2,17 @@
 NanoGPT的类定义代码
 """
 
-from math import inf
-from typing import OrderedDict, Tuple
 import logging
 import sys
+from math import inf
+from typing import OrderedDict, Tuple
+
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 
 from src.tokenizer import Tokenizer
+
 from .config import Config
 from .dataloader import DataLoader
 

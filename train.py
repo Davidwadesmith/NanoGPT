@@ -1,13 +1,15 @@
 import logging
 import sys
 from math import inf
+
 import torch
 import torch.nn as nn
-from torch.optim import Optimizer
 import torch.utils.tensorboard as tensorboard
-from src.model import Transformer
-from src.dataloader import DataLoader
+from torch.optim import Optimizer
+
 from src.config import Config
+from src.dataloader import DataLoader
+from src.model import Transformer
 
 # Debug Settings
 logging.basicConfig(

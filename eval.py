@@ -1,6 +1,7 @@
 import torch
-from src.model import Transformer
+
 from src.config import Config
+from src.model import Transformer
 from src.tokenizer import Tokenizer
 
 if __name__ == "__main__":

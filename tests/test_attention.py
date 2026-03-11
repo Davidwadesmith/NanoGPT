@@ -1,7 +1,8 @@
-import torch
 import pytest
-from src.model import MultiheadAttention
+import torch
+
 from src.config import Config
+from src.model import MultiheadAttention
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,8 @@
-import logging
-import torch
 import json
+import logging
+
+import torch
+
 from .config import Config
 
 logger = logging.getLogger(__name__)

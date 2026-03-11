@@ -1,7 +1,8 @@
-import torch
 import pytest
-from src.model import Block
+import torch
+
 from src.config import Config
+from src.model import Block
 
 
 @pytest.mark.parametrize(
