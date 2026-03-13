@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 
 EOS_TOKEN = "<eos>"
-DEFAULT_SAMPLE_SEPARATOR = "\n\n"
+DEFAULT_SAMPLE_SEPARATOR = "<|endoftext|>"
 
 
 def stream_data_prepare(

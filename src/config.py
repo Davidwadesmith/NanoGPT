@@ -12,13 +12,13 @@ class Config:
     """
 
     learning_rate: float = 1e-3
-    epochs: int = 20
+    epochs: int = 100
     vocab_size: int = 0
     seqlen: int = 128
     batch_size: int = 32
-    hidden_dim: int = 128
+    hidden_dim: int = 32
     head_n: int = 8
-    block_n: int = 8
+    block_n: int = 4
     device: str = "cpu"
     model_path: str = "./checkpoints/"
     train_dataset: str = "./data/train.bin"
