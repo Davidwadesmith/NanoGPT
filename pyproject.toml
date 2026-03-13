@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pytest>=9.0.2",
-    "tensorboard>=2.20.0",
+    "setuptools<82",
+    "tensorboard>=2.16.0",
     "torch>=2.10.0",
     "torchaudio>=2.10.0",
     "torchvision>=0.25.0",

@@ -71,6 +71,7 @@ def write_encoded_file(
         with open(input_file, "r", encoding="utf-8") as f:
             while True:
                 chunk = f.read(chunk_size)
+                pbar.update(len(chunk.encode("utf-8")))
                 if not chunk:
                     break
 
@@ -79,19 +80,17 @@ def write_encoded_file(
                 ids, carry = encode_text_chunk(carry, char2id, eos_id, sample_separator, safe_len)
                 if ids:
                     output_file.write(np.array(ids, dtype=np.int32).tobytes())
-                    # Update pbar by the number of bytes read from the input file, not the number of tokens written.
-                    pbar.update(len(bytes(carry[:safe_len], encoding="utf-8")))
                     wrote_anything = True
 
         ids, _ = encode_text_chunk(carry, char2id, eos_id, sample_separator, len(carry))
         if ids:
             output_file.write(np.array(ids, dtype=np.int32).tobytes())
-            pbar.update(len(carry))
             wrote_anything = True
 
         if wrote_anything:
             output_file.write(np.array([eos_id], dtype=np.int32).tobytes())
-            pbar.update(1)
+    
+        pbar.set_description(f"Finished encoding {input_file}")
 
 
 def encode_text_chunk(
