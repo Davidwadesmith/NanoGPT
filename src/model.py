@@ -83,6 +83,20 @@ class MultiheadAttention(torch.nn.Module):
             2,
         )  # (batch_size, head_n, seqlen, head_dim)
 
+        if self.cfg.using_flash_attention:
+            attended = F.scaled_dot_product_attention(
+                q,
+                k,
+                v,
+                is_causal=True,
+                dropout_p=0.0,
+            )  # (batch_size, head_n, seqlen, head_dim)
+            return self.wo(
+                torch.transpose(attended, 1, 2).reshape(
+                    batch_size, seqlen, self.cfg.hidden_dim
+                )
+            )
+
         attention_map = (
             q  # (batch_size, head_n, seqlen, head_dim)
             @ torch.transpose(k, -2, -1)  # (batch_size, head_n, head_dim, seqlen)

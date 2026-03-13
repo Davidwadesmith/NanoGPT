@@ -28,3 +28,4 @@ class Config:
     embed: str = "RoPE"
     norm: str = "RMSNorm"
     activation: str = "SwiGLU"
+    using_flash_attention: bool = True

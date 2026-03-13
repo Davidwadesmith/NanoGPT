@@ -6,15 +6,19 @@ from src.model import MultiheadAttention, Transformer
 
 
 @pytest.mark.parametrize(
-    "batch_size, seqlen, hidden_dim, head_n, device", [(1, 16, 16, 8, "cpu")]
+    "batch_size, seqlen, hidden_dim, head_n, device, using_flash_attention",
+    [(1, 16, 16, 8, "cpu", False), (1, 16, 16, 8, "cpu", True)],
 )
-def test_attention_shape(batch_size, seqlen, hidden_dim, head_n, device):
+def test_attention_shape(
+    batch_size, seqlen, hidden_dim, head_n, device, using_flash_attention
+):
     config = Config()
     config.batch_size = batch_size
     config.seqlen = seqlen
     config.hidden_dim = hidden_dim
     config.head_n = head_n
     config.device = device
+    config.using_flash_attention = using_flash_attention
     attention = MultiheadAttention(config)
     gen = torch.Generator(device)
     input = torch.randn(
@@ -38,6 +42,7 @@ def test_attention_accepts_shorter_runtime_sequence():
     config.hidden_dim = 16
     config.head_n = 8
     config.device = "cpu"
+    config.using_flash_attention = True
 
     attention = MultiheadAttention(config)
     runtime_seqlen = 17
