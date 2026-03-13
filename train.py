@@ -64,6 +64,7 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
 
         loss_avg = validate(model, dataLoader)
         if loss_avg < min_val_loss:
+            
             torch.save(model.state_dict(), cfg.model_path + "final_loss.pt")
             min_val_loss = loss_avg
 
@@ -78,7 +79,8 @@ def train(model: nn.Module, optimizer: Optimizer, dataLoader: DataLoader, cfg: C
 
 if __name__ == "__main__":
     config = Config()
-    dataLoader = DataLoader(config.dataset, config)
+    dataLoader = DataLoader(config.train_dataset, config.validate_dataset, config)
+    print("Data loaded.")
     transformer = Transformer(config, dataLoader.vocab_size)
     tf_optimizer = torch.optim.AdamW(transformer.parameters(), lr=config.learning_rate)
     try:

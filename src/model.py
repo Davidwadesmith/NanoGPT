@@ -5,7 +5,7 @@ NanoGPT的类定义代码
 import logging
 import sys
 from math import inf
-from typing import OrderedDict, Tuple
+from typing import OrderedDict, Tuple, cast
 
 import torch
 import torch.nn as nn
@@ -40,30 +40,22 @@ class MultiheadAttention(torch.nn.Module):
         self.wv = nn.Linear(hidden_dim, hidden_dim, bias=False, device=cfg.device)
         self.wo = nn.Linear(hidden_dim, hidden_dim, bias=False, device=cfg.device)
         self.softmax = nn.Softmax(dim=-1)
+        self.register_buffer("mask", (torch.tril(torch.ones(self.cfg.seqlen, self.cfg.seqlen)) == 0).to(
+            torch.device(self.cfg.device)
+        ))  # (seqlen, seqlen)
 
     def forward(self, hidden_tokens) -> torch.Tensor:
+        batch_size, seqlen, _ = hidden_tokens.shape
         q = self.wq(hidden_tokens)
         k = self.wk(hidden_tokens)
         if self.cfg.embed == "RoPE":
-            q = self.RoPE(
-                self.cfg.batch_size,
-                self.cfg.seqlen,
-                self.cfg.hidden_dim,
-                q,
-                torch.device(self.cfg.device),
-            )
-            k = self.RoPE(
-                self.cfg.batch_size,
-                self.cfg.seqlen,
-                self.cfg.hidden_dim,
-                k,
-                torch.device(self.cfg.device),
-            )
+            q = self.RoPE(q, torch.device(self.cfg.device))
+            k = self.RoPE(k, torch.device(self.cfg.device))
 
         q = torch.transpose(
             q.view(
-                self.cfg.batch_size,
-                self.cfg.seqlen,
+                batch_size,
+                seqlen,
                 self.cfg.head_n,
                 self.cfg.hidden_dim // self.cfg.head_n,
             ),
@@ -72,8 +64,8 @@ class MultiheadAttention(torch.nn.Module):
         )  # (batch_size, head_n, seqlen, head_dim)
         k = torch.transpose(
             k.view(
-                self.cfg.batch_size,
-                self.cfg.seqlen,
+                batch_size,
+                seqlen,
                 self.cfg.head_n,
                 self.cfg.hidden_dim // self.cfg.head_n,
             ),
@@ -82,8 +74,8 @@ class MultiheadAttention(torch.nn.Module):
         )  # (batch_size, head_n, seqlen, head_dim)
         v = torch.transpose(
             self.wv(hidden_tokens).view(
-                self.cfg.batch_size,
-                self.cfg.seqlen,
+                batch_size,
+                seqlen,
                 self.cfg.head_n,
                 self.cfg.hidden_dim // self.cfg.head_n,
             ),
@@ -97,12 +89,16 @@ class MultiheadAttention(torch.nn.Module):
             / ((self.cfg.hidden_dim // self.cfg.head_n) ** 0.5)
         )  # (batch_size, head_n, seqlen, seqlen)
 
-        self.mask = (torch.tril(torch.ones(self.cfg.seqlen, self.cfg.seqlen)) == 0).to(
-            torch.device(self.cfg.device)
-        )  # (seqlen, seqlen)
+        mask = cast(torch.Tensor, self.mask)
+        if seqlen > mask.size(0):
+            causal_mask = (
+                torch.tril(torch.ones(seqlen, seqlen, device=attention_map.device)) == 0
+            )
+        else:
+            causal_mask = mask[:seqlen, :seqlen]
 
         masked_attention_map = torch.masked_fill(
-            attention_map, self.mask, -inf
+            attention_map, causal_mask, -inf
         )  # match -1, -2 dim
         masked_attention = (
             self.softmax(masked_attention_map) @ v
@@ -110,18 +106,13 @@ class MultiheadAttention(torch.nn.Module):
 
         return self.wo(
             torch.transpose(masked_attention, 1, 2).reshape(
-                self.cfg.batch_size, self.cfg.seqlen, self.cfg.hidden_dim
+                batch_size, seqlen, self.cfg.hidden_dim
             )
         )  # (batch_size, seqlen, hidden_dim)
 
     @staticmethod
-    def RoPE(
-        batch_size: int,
-        seqlen: int,
-        hidden_dim: int,
-        x: torch.Tensor,
-        device: torch.device,
-    ) -> torch.Tensor:
+    def RoPE(x: torch.Tensor, device: torch.device) -> torch.Tensor:
+        batch_size, seqlen, hidden_dim = x.shape
         result = torch.zeros_like(x).to(device)  # (batch_size, seqlen, hidden_dim)
         position = (
             torch.arange(0, seqlen, dtype=torch.float32).unsqueeze(1).unsqueeze(0)
@@ -201,8 +192,8 @@ class LayerNorm(nn.Module):
         variance = torch.var(
             hidden_tokens, dim=-1, keepdim=True
         )  # variance(batch_size, seqlen, 1)
-        x = (hidden_tokens - mean) / (variance**0.5)
-        y = (self.gamma * x) / ((variance + 1e-5) ** 0.5) + self.beta
+        x = (hidden_tokens - mean) / ((variance + 1e-5) ** 0.5)
+        y = (self.gamma * x) + self.beta
         return y
 
 
@@ -215,11 +206,9 @@ class RMSNorm(nn.Module):
         )
 
     def forward(self, hidden_tokens: torch.Tensor) -> torch.Tensor:
-        variance = torch.var(
-            hidden_tokens, dim=-1, keepdim=True
-        )  # variance(batch_size, seqlen, 1)
-        x = (hidden_tokens) / (variance**0.5)
-        y = (self.gamma * x) / ((variance + 1e-5) ** 0.5)
+        rsm = torch.sqrt(torch.mean(hidden_tokens**2, dim=-1, keepdim=True)+1e-5)  # variance(batch_size, seqlen, 1)
+        x = (hidden_tokens) / rsm
+        y = (self.gamma * x)
         return y
 
 
@@ -266,6 +255,10 @@ class Transformer(nn.Module):
             cfg.hidden_dim, vocab_size, bias=False, device=cfg.device
         )
         self.linear.weight = self.embedding_layer.weight
+        if cfg.embed == "sinusoidal":
+            self.register_buffer("positional_embedding_layer", self.PositionEmbedding(
+                self.cfg.seqlen, self.cfg.hidden_dim
+            ).to(torch.device(self.cfg.device)))
 
     def forward(
         self, tokens, target_tokens=None
@@ -283,18 +276,16 @@ class Transformer(nn.Module):
             tokens
         )  # embeddings(batch_size, seqlen, hidden_dim)
 
-        self.positional_embedding_layer = self.PositionEmbedding(
-            self.cfg.seqlen, self.cfg.hidden_dim
-        ).to(torch.device(self.cfg.device))
-
         if self.cfg.embed == "sinusoidal":
-            embeddings = embeddings + self.positional_embedding_layer
+            positional_embedding_layer = cast(torch.Tensor, self.positional_embedding_layer)
+            embeddings = embeddings + positional_embedding_layer[:seqlen]
             logger.debug(f"{embeddings.shape=}")
         elif self.cfg.embed == "RoPE":
             pass
         else:
             logger.info("Default config of positional embeddings: sinusoidal")
-            embeddings = embeddings + self.positional_embedding_layer
+            positional_embedding_layer = cast(torch.Tensor, self.positional_embedding_layer)
+            embeddings = embeddings + positional_embedding_layer[:seqlen]
             logger.debug(f"{embeddings.shape=}")
 
         hidden = self.blocks(embeddings)  # hidden(batch_size, seqlen, hidden_dim)
@@ -314,12 +305,6 @@ class Transformer(nn.Module):
             return new_logits
 
     def generate(self, text: str, tokenizer: Tokenizer, max_new_token=50) -> str:
-        logger.critical(f"{text=}")
-        cfg = self.cfg
-        tmp_batch_size = cfg.batch_size
-        cfg.batch_size = 1
-        self.cfg = cfg
-
         tokens = (
             tokenizer.text2token(text).unsqueeze(0).to(torch.device(self.cfg.device))
         )
@@ -327,17 +312,15 @@ class Transformer(nn.Module):
 
         assert tokens.ndim == 2
         for _ in range(max_new_token):
-            self.cfg.seqlen = min(len(tokens[0]), max_context)
-            logger.critical(f"{self.cfg.seqlen=}")
+            context_tokens = tokens[:, -max_context:]
             new_token = torch.multinomial(
-                self(tokens[:, -self.cfg.seqlen :]).squeeze(0)[-1], num_samples=1
+                self(context_tokens).squeeze(0)[-1], num_samples=1
             )
+            eos_id = getattr(tokenizer, "eos_id", None)
+            if eos_id is not None and new_token.item() == eos_id:
+                break
             tokens = torch.cat([tokens, new_token.unsqueeze_(0)], dim=-1)
-
-        cfg = self.cfg
-        cfg.batch_size = tmp_batch_size
-        self.cfg = cfg
-        return "".join([tokenizer.token2text(t) for t in tokens][0])
+        return "".join(tokenizer.token2text(tokens[0]))
 
     @staticmethod
     def PositionEmbedding(seqlen: int, hidden_dim: int):
